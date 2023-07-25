@@ -1,4 +1,30 @@
-import puppeteer from "puppeteer";
+import puppeteer, { KeyInput, Page } from "puppeteer";
+
+const hasChanged = async (page: Page): Promise<number[][]> => {
+  const newBoard = [];
+
+  await page.waitForSelector(".tile-container");
+
+  const tileContainer = await page.$(".tile-container");
+
+  if (tileContainer) {
+    const children = await tileContainer.$$("*");
+
+    for (const child of children) {
+      const className = (await child.getProperty("className")).toString();
+      if (!className.includes("tile-inner")) {
+        console.log(className + "\n");
+        const positionClass = className.split(" ")[2];
+        console.log(positionClass + "\n");
+        const splitPosition = positionClass.split("-");
+        console.log(splitPosition + "\n");
+        newBoard.push([parseInt(splitPosition[2]), parseInt(splitPosition[3])]);
+      }
+    }
+  }
+
+  return newBoard;
+};
 
 (async () => {
   // Launch the browser and open a new blank page
@@ -8,21 +34,29 @@ import puppeteer from "puppeteer";
   // Navigate the page to a URL
   await page.goto("https://play2048.co/");
 
-  await page.waitForSelector(".tile-container");
+  const moveSequence: KeyInput[] = ["ArrowDown", "ArrowLeft", "ArrowRight"];
 
-  const children = await page.evaluate(() => {
-    const parentElement = document.querySelector(`.tile-container`);
-    if (!parentElement) return [];
+  let moveIndex = 0;
 
-    console.log(parentElement);
+  let board: number[][] = [[], [], []];
 
-    return Array.from(parentElement.children);
-  });
+  let newBoard: number[][] = [[], [], []];
 
-  console.log(children);
+  for (let i = 0; i < 10; i++) {
+    newBoard = await hasChanged(page);
+    if (board !== newBoard) {
+      continue;
+    } else {
+      moveIndex += 1;
+    }
+    board = newBoard;
+    console.log("Board: ", board);
+    console.log("Pressing: " + moveSequence[0]);
+    await page.keyboard.press(moveSequence[0]);
+  }
 
   setTimeout(async () => {
     console.log("Finished");
     await browser.close();
-  }, 3000);
+  }, 10000);
 })();
