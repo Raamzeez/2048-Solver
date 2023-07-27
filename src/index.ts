@@ -2,17 +2,34 @@ import puppeteer, { KeyInput, Page } from "puppeteer";
 
 const visualizeBoard = (board: number[][]): void => {
   const grid = [
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
   ];
 
+  // console.log(board);
+
   board.forEach((piece) => {
-    grid[piece[0]][piece[1]] = 1;
+    console.log("piece", piece);
+    if (piece[0] && piece[1]) {
+      grid[piece[1] - 1][piece[0] - 1] = piece[2];
+    }
   });
 
-  console.log(grid);
+  // console.log(grid);
+
+  grid.forEach((row) => {
+    console.log("---------------------");
+    console.log("|    |    |    |    |");
+    let rowString = "";
+    row.forEach((tile) => {
+      rowString += `| ${tile} |`;
+    });
+    console.log(rowString);
+    console.log("|    |    |    |    |");
+    console.log("---------------------");
+  });
 };
 
 const getBoard = async (
@@ -31,17 +48,22 @@ const getBoard = async (
     for (const child of children) {
       const className = (await child.getProperty("className")).toString();
       if (!className.includes("tile-inner")) {
-        console.log(className + "\n");
+        // console.log(className + "\n");
         const splitClasses = className.split(" ");
         const positionClass = splitClasses[2];
-        console.log(positionClass + "\n");
+        // console.log(positionClass + "\n");
         const splitPosition = positionClass.split("-");
-        console.log(splitPosition + "\n");
-        newBoard.push([parseInt(splitPosition[2]), parseInt(splitPosition[3])]);
+        // console.log(splitPosition + "\n");
         const tileValue = parseInt(splitClasses[1].split("-")[1]);
         if (tileValue > highestTile) {
           highestTile = tileValue;
         }
+
+        newBoard.push([
+          parseInt(splitPosition[2]),
+          parseInt(splitPosition[3]),
+          tileValue,
+        ]);
       }
     }
   }
@@ -65,7 +87,12 @@ const isGameOver = async (page: Page): Promise<boolean> => {
   await page.goto("https://play2048.co/");
 
   // const moveSequence: KeyInput[] = ["ArrowDown", "ArrowLeft", "ArrowRight"];
-  const moveSequence: KeyInput[] = ["ArrowLeft", "ArrowDown", "ArrowRight"];
+  const moveSequence: KeyInput[] = [
+    "ArrowLeft",
+    "ArrowDown",
+    "ArrowRight",
+    "ArrowDown",
+  ];
 
   let moveIndex = 0;
 
@@ -81,7 +108,7 @@ const isGameOver = async (page: Page): Promise<boolean> => {
 
   let highestTile = 0;
 
-  for (let i = 0; i < 500; i++) {
+  while (true) {
     const gameOver = await isGameOver(page);
     if (gameOver) {
       console.log("GAME OVER!");
@@ -90,8 +117,8 @@ const isGameOver = async (page: Page): Promise<boolean> => {
     const data = await getBoard(page, highestTile);
     newBoard = data[0];
     highestTile = data[1];
-    console.log("Prev Board: ", board);
-    console.log("New Board: ", newBoard);
+    // console.log("Prev Board: ", board);
+    // console.log("New Board: ", newBoard);
     // if (JSON.stringify(board) == JSON.stringify(newBoard)) {
     //   console.log("Board has not changed");
     //   repeats += 1;
@@ -115,11 +142,12 @@ const isGameOver = async (page: Page): Promise<boolean> => {
     //   repeats = 0;
     // }
     board = newBoard;
-    console.log("\nMove Index", moveIndex);
-    console.log("Pressing: " + moveSequence[moveIndex], "\n");
+    visualizeBoard(board);
+    // console.log("\nMove Index", moveIndex);
+    // console.log("Pressing: " + moveSequence[moveIndex], "\n");
     // loops++;
     moves++;
-    if (moveIndex < 2) {
+    if (moveIndex < moveSequence.length - 1) {
       moveIndex++;
     } else {
       moveIndex = 0;
